@@ -548,7 +548,7 @@ def main():
             modules_to_save=["classifier","pooler"],
         )
     elif peft_name == 'psoft':
-        config = PSOFTConfig(
+        peft_config = PSOFTConfig(
             r=peft_rank,
             psoft_alpha=peft_rank,
             psoft_dropout=peft_dropout,
@@ -563,8 +563,9 @@ def main():
             cayley_neumann_eps=None,
             modules_to_save=["classifier", "pooler"],
         )
-
+        model = get_peft_model(model, peft_config)
         check_lora_A_row_orthogonality(model)
+
     elif peft_name == 'full':
         pass
     else:
