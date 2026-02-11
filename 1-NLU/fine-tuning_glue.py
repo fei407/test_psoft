@@ -302,18 +302,28 @@ class PEFTArguments:
 
 def check_lora_A_row_orthogonality(model, tol=1e-1):
     for name, module in model.named_modules():
-        if hasattr(module, "lora_A"):
-            for adapter_name, A_layer in module.lora_A.items():
-                A = A_layer.weight.data
-                AA_t = A @ A.T
-                identity = torch.eye(A.shape[0], device=A.device)
-                deviation = torch.norm(AA_t - identity)
+        if not (hasattr(module, "_get_cache_buffers") and hasattr(module, "psoft_R")):
+            continue
 
-                print(f"[{name}] Adapter: {adapter_name} | ‖A·Aᵀ - I‖ = {deviation:.4e}")
-                if deviation < tol:
-                    print(" --> A is approximately row-orthogonal")
-                else:
-                    print(" --> A is NOT row-orthogonal")
+        for adapter_name in module.psoft_R.keys():
+            if hasattr(module, "_psoft_cache_built") and not module._psoft_cache_built.get(adapter_name, False):
+                print(f"[{name}] Adapter: {adapter_name} | cache not built, skip")
+                continue
+
+            A, _ = module._get_cache_buffers(adapter_name)
+            if A is None:
+                print(f"[{name}] Adapter: {adapter_name} | A is None, skip")
+                continue
+
+            AA_t = A @ A.T
+            identity = torch.eye(A.shape[0], device=A.device, dtype=A.dtype)
+            deviation = torch.norm(AA_t - identity)
+
+            print(f"[{name}] Adapter: {adapter_name} | ‖A·Aᵀ - I‖ = {deviation:.4e}")
+            if deviation < tol:
+                print(" --> A is approximately row-orthogonal")
+            else:
+                print(" --> A is NOT row-orthogonal")
 
 
 def main():
