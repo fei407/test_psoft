@@ -1,4 +1,4 @@
-# Copyright 2023-present the HuggingFace Inc. team.
+# Copyright 2026-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
 from peft.utils import register_peft_method
 
 from .config import PSOFTConfig
-from .layer import Linear, PSOFTLayer, OrthLayer
+from .layer import Linear, OrthLayer, PSOFTLayer
 from .model import PSOFTModel
 
 
-__all__ = ["Linear", "PSOFTConfig", "PSOFTLayer", "PSOFTModel", "OrthLayer"]
+__all__ = ["Linear", "OrthLayer", "PSOFTConfig", "PSOFTLayer", "PSOFTModel"]
 
 register_peft_method(name="psoft", config_cls=PSOFTConfig, model_cls=PSOFTModel, prefix="psoft_")

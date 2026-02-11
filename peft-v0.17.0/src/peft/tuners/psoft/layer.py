@@ -1,4 +1,4 @@
-# Copyright 2023-present the HuggingFace Inc. team.
+# Copyright 2026-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ class OrthLayer(nn.Module):
         mag_a: bool = True,
         use_cayley_neumann: bool = True,
         num_cayley_neumann_terms: int = 5,
-        cayley_neumann_eps: Optional[float] = 0.9, 
+        cayley_neumann_eps: Optional[float] = 0.9,
     ):
         super().__init__()
         self.size = size
@@ -141,7 +141,7 @@ class OrthLayer(nn.Module):
         if cast_to_fp32:
             Q = Q.float()
 
-        I = torch.eye(self.size, device=Q.device, dtype=Q.dtype)
+        id_mat = torch.eye(self.size, device=Q.device, dtype=Q.dtype)
 
         # Adapted from the Cayley/Neumann-based orthogonal parametrization used in OFT v2
         # (PEFT implementation: https://github.com/huggingface/peft/blob/main/src/peft/tuners/oft/layer.py) #L135
@@ -150,7 +150,7 @@ class OrthLayer(nn.Module):
                 Q = self._project_Q(Q, eps=self.cayley_neumann_eps)
             t = int(self.num_cayley_neumann_terms)
 
-            R = I.clone()
+            R = id_mat.clone()
             if t > 1:
                 R.add_(Q, alpha=2.0)
                 if t > 2:
@@ -165,7 +165,7 @@ class OrthLayer(nn.Module):
                     Q_power = Q_power @ Q
                     R.add_(Q_power)
         else:
-            R = torch.linalg.solve(I + Q, I - Q, left=False)
+            R = torch.linalg.solve(id_mat + Q, id_mat - Q, left=False)
 
         if self.mag_b and self.vector_b is not None:
             R = self.vector_b[:, None] * R
@@ -263,7 +263,6 @@ class PSOFTLayer(BaseTunerLayer):
         self.psoft_svd[adapter_name] = config.psoft_svd
         self.psoft_svd_lowrank_niter[adapter_name] = config.psoft_svd_lowrank_niter
 
-
         self.psoft_R[adapter_name] = OrthLayer(
             size=r,
             orth=config.psoft_orth,
@@ -271,14 +270,14 @@ class PSOFTLayer(BaseTunerLayer):
             mag_a=config.psoft_mag_a,
             use_cayley_neumann=config.use_cayley_neumann,
             num_cayley_neumann_terms=config.num_cayley_neumann_terms,
-            cayley_neumann_eps = config.cayley_neumann_eps
+            cayley_neumann_eps=config.cayley_neumann_eps,
         )
 
         do_init = getattr(config, "init_weights", True)
         self._move_adapter_to_device_of_base_layer(adapter_name)
         self.psoft_R[adapter_name].reset_parameters(init_weights=do_init)
         self.psoft_R[adapter_name].requires_grad_(True)
-        
+
         init_type = self.init_psoft_weights[adapter_name]
         if do_init and isinstance(init_type, str) and init_type.endswith("init"):
             base_w = self.get_base_layer().weight
@@ -317,12 +316,12 @@ class PSOFTLayer(BaseTunerLayer):
             Sr_scaled = Sr / self.scaling[adapter_name]
 
             if init_type == "psoft_init":
-                A = Uhr                                # (r, in)
-                B = Vr @ torch.diag(Sr_scaled)         # (out, r)
+                A = Uhr  # (r, in)
+                B = Vr @ torch.diag(Sr_scaled)  # (out, r)
             elif init_type == "pissa_init":
                 s_sqrt = torch.sqrt(Sr_scaled)
-                A = torch.diag(s_sqrt) @ Uhr           # (r, in)
-                B = Vr @ torch.diag(s_sqrt)            # (out, r)
+                A = torch.diag(s_sqrt) @ Uhr  # (r, in)
+                B = Vr @ torch.diag(s_sqrt)  # (out, r)
             else:
                 raise ValueError(f"Unknown init_psoft_weights: {init_type}")
 
@@ -336,17 +335,18 @@ class PSOFTLayer(BaseTunerLayer):
         # weight: (out, in) fp32
         if svd_mode == "full":
             U, S, Vh = torch.linalg.svd(weight.data, full_matrices=False)
-            Vr = U[:, :r]          # (out, r)
-            Sr = S[:r]             # (r,)
-            Uhr = Vh[:r, :]        # (r, in)
+            Vr = U[:, :r]  # (out, r)
+            Sr = S[:r]  # (r,)
+            Uhr = Vh[:r, :]  # (r, in)
         elif svd_mode == "lowrank":
             U, S, V = svd_lowrank(weight.data, q=r, niter=niter)  # V: (in, r)
             Vr = U[:, :r]
             Sr = S[:r]
-            Uhr = V[:, :r].t()      # (r, in)
+            Uhr = V[:, :r].t()  # (r, in)
         else:
             raise ValueError(f"Unknown svd_mode: {svd_mode}")
         return Vr, Sr, Uhr
+
 
 class Linear(nn.Module, PSOFTLayer):
     def __init__(
@@ -368,7 +368,7 @@ class Linear(nn.Module, PSOFTLayer):
 
     def get_delta_weight(self, adapter_name: str) -> torch.Tensor:
         """
-        ΔW = scaling * B (R - I) A
+        ΔW = scaling * B (R - id_mat) A
         Returns in base weight layout (respecting fan_in_fan_out).
         """
         if adapter_name not in self.psoft_R:
@@ -399,8 +399,8 @@ class Linear(nn.Module, PSOFTLayer):
         B_c = B.to(device=device, dtype=compute_dtype)
         R_c = R.to(device=device, dtype=compute_dtype)
 
-        I = torch.eye(r, device=device, dtype=compute_dtype)
-        delta = B_c @ (R_c - I) @ A_c  # (out, in)
+        id_mat = torch.eye(r, device=device, dtype=compute_dtype)
+        delta = B_c @ (R_c - id_mat) @ A_c  # (out, in)
         delta = transpose(delta, self.fan_in_fan_out)
         delta = delta * self.scaling[adapter_name]
 
@@ -410,7 +410,7 @@ class Linear(nn.Module, PSOFTLayer):
         adapter_names = check_adapters_to_merge(self, adapter_names)
         if not adapter_names:
             return
-        
+
         base_layer = self.get_base_layer()
 
         for active_adapter in adapter_names:
@@ -435,7 +435,6 @@ class Linear(nn.Module, PSOFTLayer):
                 base_layer.weight.data += delta_weight.to(base_layer.weight.dtype)
 
             self.merged_adapters.append(active_adapter)
-
 
     def unmerge(self) -> None:
         if not self.merged:
@@ -480,7 +479,9 @@ class Linear(nn.Module, PSOFTLayer):
                     with gather_params_ctx(base_w):
                         self._build_cache_once(active_adapter, init_type)
                 else:
-                    raise RuntimeError(f"PSOFT cache not built for adapter {active_adapter} and no init_type provided.")
+                    raise RuntimeError(
+                        f"PSOFT cache not built for adapter {active_adapter} and no init_type provided."
+                    )
 
             A, B = self._get_cache_buffers(active_adapter)
 

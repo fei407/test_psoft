@@ -1,4 +1,4 @@
-# Copyright 2023-present the HuggingFace Inc. team.
+# Copyright 2026-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@
 
 from __future__ import annotations
 
-import torch
+from typing import Optional
+
 from torch import nn
 
-from typing import Optional, List, Callable
-from peft.tuners.tuners_utils import BaseTuner, BaseTunerLayer, get_device_map
+from peft.tuners.tuners_utils import BaseTuner, get_device_map
 from peft.utils import TRANSFORMERS_MODELS_TO_PSOFT_TARGET_MODULES_MAPPING
 
 from .config import PSOFTConfig
-from .layer import Linear, PSOFTLayer, dispatch_default
+from .layer import PSOFTLayer, dispatch_default
+
 
 class PSOFTModel(BaseTuner):
     """

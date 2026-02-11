@@ -1,4 +1,4 @@
-# Copyright 2023-present the HuggingFace Inc. team.
+# Copyright 2026-present the HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,13 +41,13 @@ class PSOFTConfig(PeftConfig):
             - `"pissa_init"`: SVD-based initialization with symmetrical A and B (Standard PiSSA).
         psoft_svd (`Literal["full", "lowrank"]`):
             - `"full"`: uses torch.linalg.svd.
-            - `"lowrank"`: torch.svd_lowrank (may be faster for large matrices / large models).        
+            - `"lowrank"`: torch.svd_lowrank (may be faster for large matrices / large models).
         psoft_svd_lowrank_niter (`int`): Number of power iterations for torch.svd_lowrank when psoft_svd='lowrank'.
-        psoft_orth (`bool`): 
+        psoft_orth (`bool`):
             If True, R is constrained to be orthogonal via Cayley parameterization,
             which helps preserve the geometric relationships among the pre-trained weight vectors.
             If False, R is a free r*r matrix without orthogonality constraints.
-        psoft_mag_b (`bool`): 
+        psoft_mag_b (`bool`):
             If True, learns a diagonal scaling vector on the output side of R.
             Typically used together with psoft_mag_a to improve task adaptability,
             at the cost of slightly distorting the geometric structure of the pre-trained weight space.
@@ -57,7 +57,7 @@ class PSOFTConfig(PeftConfig):
             at the cost of slightly distorting the geometric structure of the pre-trained weight space.
         use_cayley_neumann (`bool`): Use Cayley-Neumann series for orthogonal R (faster for large ranks).
         num_cayley_neumann_terms (`int`): Number of terms in Cayley-Neumann series, default is 5.
-        cayley_neumann_eps (`float`): 
+        cayley_neumann_eps (`float`):
             Upper bound on `||Q||_F`. If exceeded, `Q` is rescaled to this value to stabilize the
             truncated Cayley-Neumann approximation, typically improving convergence and numerical stability.
         init_weights (`bool`): Non-zero initialization of R.
@@ -78,9 +78,7 @@ class PSOFTConfig(PeftConfig):
 
     target_modules: Optional[Union[list[str], str]] = field(
         default=None,
-        metadata={
-            "help": "List of module names or regex to replace with PSOFT. Same semantics as LoRA."
-        },
+        metadata={"help": "List of module names or regex to replace with PSOFT. Same semantics as LoRA."},
     )
     exclude_modules: Optional[Union[list[str], str]] = field(
         default=None,
@@ -104,7 +102,9 @@ class PSOFTConfig(PeftConfig):
     )
     psoft_svd: Literal["full", "lowrank"] = field(
         default="full",
-        metadata={"help": "SVD backend used for init: 'full' uses torch.linalg.svd, 'lowrank' uses torch.svd_lowrank."},
+        metadata={
+            "help": "SVD backend used for init: 'full' uses torch.linalg.svd, 'lowrank' uses torch.svd_lowrank."
+        },
     )
     psoft_svd_lowrank_niter: int = field(
         default=10,
@@ -144,9 +144,7 @@ class PSOFTConfig(PeftConfig):
     )
     use_cayley_neumann: bool = field(
         default=False,
-        metadata={
-            "help": "Use Cayley-Neumann series for orthogonal R (faster, approximate orthogonality)."
-        },
+        metadata={"help": "Use Cayley-Neumann series for orthogonal R (faster, approximate orthogonality)."},
     )
     num_cayley_neumann_terms: int = field(
         default=5,
@@ -156,20 +154,18 @@ class PSOFTConfig(PeftConfig):
         default=None,
         metadata={
             "help": (
-            "The Neumann-series approximation is most reliable when the generator matrix `Q` has a sufficiently small"
-            "norm (heuristically, `||Q|| < 1`). This parameter enforces that condition by projecting `Q` onto an"
-            "`||Q||_F <= cayley_neumann_eps` ball: when `||Q||_F` exceeds the threshold, `Q` is uniformly scaled down."
-            "Larger values apply weaker shrinkage; smaller values apply stronger shrinkage, typically improving"
-            "convergence and numerical stability at the cost of smaller update magnitude."
-            "Details please refer to https://spherelab.ai/oftv2/"
+                "The Neumann-series approximation is most reliable when the generator matrix `Q` has a sufficiently small"
+                "norm (heuristically, `||Q|| < 1`). This parameter enforces that condition by projecting `Q` onto an"
+                "`||Q||_F <= cayley_neumann_eps` ball: when `||Q||_F` exceeds the threshold, `Q` is uniformly scaled down."
+                "Larger values apply weaker shrinkage; smaller values apply stronger shrinkage, typically improving"
+                "convergence and numerical stability at the cost of smaller update magnitude."
+                "Details please refer to https://spherelab.ai/oftv2/"
             )
         },
     )
     modules_to_save: Optional[list[str]] = field(
         default=None,
-        metadata={
-            "help": "List of modules apart from PSOFT layers to set as trainable and save."
-        },
+        metadata={"help": "List of modules apart from PSOFT layers to set as trainable and save."},
     )
     init_weights: bool = field(
         default=True,

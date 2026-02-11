@@ -49,10 +49,10 @@ from .multitask_prompt_tuning import MultitaskPromptEmbedding, MultitaskPromptTu
 from .oft import OFTConfig, OFTModel
 from .osf import OSFConfig, OSFModel
 from .p_tuning import PromptEncoder, PromptEncoderConfig, PromptEncoderReparameterizationType
-from .psoft import PSOFTConfig, PSOFTModel
 from .poly import PolyConfig, PolyModel
 from .prefix_tuning import PrefixEncoder, PrefixTuningConfig
 from .prompt_tuning import PromptEmbedding, PromptTuningConfig, PromptTuningInit
+from .psoft import PSOFTConfig, PSOFTModel
 from .randlora import RandLoraConfig, RandLoraModel
 from .road import RoadConfig, RoadModel
 from .shira import ShiraConfig, ShiraModel
